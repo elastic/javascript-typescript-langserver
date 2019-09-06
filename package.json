@@ -2,7 +2,7 @@
   "name": "@elastic/javascript-typescript-langserver",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "license": "Apache-2.0",
   "description": "Implementation of the Language Server Protocol for JavaScript and TypeScript",
   "keywords": [
@@ -60,7 +60,8 @@
     "typescript": "~3.3.3333",
     "vscode-jsonrpc": "^4.0.0",
     "vscode-languageserver": "^5.0.0",
-    "vscode-languageserver-types": "^3.0.3"
+    "vscode-languageserver-types": "^3.0.3",
+    "yarn": "^1.12.3"
   },
   "devDependencies": {
     "@commitlint/cli": "^8.1.0",
