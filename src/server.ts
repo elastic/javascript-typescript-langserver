@@ -5,7 +5,8 @@ import { isNotificationMessage } from 'vscode-jsonrpc/lib/messages'
 import { MessageEmitter, MessageLogOptions, MessageWriter, registerLanguageHandler } from './connection'
 import { RemoteLanguageClient } from './lang-handler'
 import { Logger, PrefixedLogger, StdioLogger } from './logging'
-import { TypeScriptService } from './typescript-service'
+
+import { ExtendedTypescriptService } from './extended-typescript-service';
 
 /** Options to `serve()` */
 export interface ServeOptions extends MessageLogOptions {
@@ -37,7 +38,7 @@ export function createClusterLogger(logger = new StdioLogger()): Logger {
  */
 export function serve(
     options: ServeOptions,
-    createLangHandler = (remoteClient: RemoteLanguageClient) => new TypeScriptService(remoteClient)
+    createLangHandler = (remoteClient: RemoteLanguageClient) => new ExtendedTypescriptService(remoteClient)
 ): void {
     const logger = options.logger || createClusterLogger()
     if (options.clusterSize > 1 && cluster.isMaster) {
