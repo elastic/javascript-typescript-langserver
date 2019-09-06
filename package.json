@@ -2,7 +2,7 @@
   "name": "@elastic/javascript-typescript-langserver",
   "homepage": "https://github.com/elastic/javascript-typescript-langserver",
   "author": "Elastic",
-  "version": "0.3.0-development",
+  "version": "0.3.0",
   "license": "Apache-2.0",
   "description": "Implementation of the Language Server Protocol for JavaScript and TypeScript",
   "keywords": [
