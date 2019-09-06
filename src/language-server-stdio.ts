@@ -19,7 +19,6 @@ const { initTracer } = require('jaeger-client')
 
 program
     .version(packageJson.version)
-    .option('-s, --strict', 'enables strict mode')
     .option('-t, --trace', 'print all requests and responses')
     .option('-l, --logfile [file]', 'log to this file')
     .option('-j, --enable-jaeger', 'enable OpenTracing through Jaeger')
@@ -31,7 +30,6 @@ const tracer = program.enableJaeger
     : new Tracer()
 
 const options: TypeScriptServiceOptions & MessageLogOptions & RegisterLanguageHandlerOptions = {
-    strict: program.strict,
     logMessages: program.trace,
     logger,
     tracer,

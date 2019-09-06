@@ -1,5 +1,5 @@
 import { walkMostAST } from './ast'
-import { LocalFileSystem, RemoteFileSystem } from './fs';
+import { LocalFileSystem } from './fs';
 import { LanguageClient } from './lang-handler'
 import { extractNodeModulesPackageName } from './packages'
 import { ProjectConfiguration } from './project-manager'
@@ -60,8 +60,8 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // this.traceModuleResolution = true;
     }
 
-    protected _initializeFileSystems(accessDisk: boolean): void {
-        this.fileSystem = accessDisk ? new LocalFileSystem(this.rootUri) : new RemoteFileSystem(this.client)
+    protected _initializeFileSystems(): void {
+        this.fileSystem = new LocalFileSystem(this.rootUri)
         this.inMemoryFileSystem = new PatchedInMemoryFileSystem(this.root, this.logger)
     }
 

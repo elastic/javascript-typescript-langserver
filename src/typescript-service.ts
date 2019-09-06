@@ -36,7 +36,7 @@ import {
 } from 'vscode-languageserver'
 import { walkMostAST } from './ast'
 import { convertTsDiagnostic } from './diagnostics'
-import { FileSystem, FileSystemUpdater, LocalFileSystem, RemoteFileSystem } from './fs'
+import { FileSystem, FileSystemUpdater, LocalFileSystem } from './fs'
 import { LanguageClient } from './lang-handler'
 import { Logger, LSPLogger } from './logging'
 import { InMemoryFileSystem, isTypeScriptLibrary } from './memfs'
@@ -252,9 +252,7 @@ export class TypeScriptService {
             if (!this.rootUri.endsWith('/')) {
                 this.rootUri += '/'
             }
-            this._initializeFileSystems(
-                !this.options.strict && !(params.capabilities.xcontentProvider && params.capabilities.xfilesProvider)
-            )
+            this._initializeFileSystems()
             this.updater = new FileSystemUpdater(this.fileSystem, this.inMemoryFileSystem)
             this.projectManager = new ProjectManager(
                 this.root,
@@ -327,10 +325,9 @@ export class TypeScriptService {
      * Initializes the remote file system and in-memory file system.
      * Can be overridden
      *
-     * @param accessDisk Whether the language server is allowed to access the local file system
      */
-    protected _initializeFileSystems(accessDisk: boolean): void {
-        this.fileSystem = accessDisk ? new LocalFileSystem(this.rootUri) : new RemoteFileSystem(this.client)
+    protected _initializeFileSystems(): void {
+        this.fileSystem = new LocalFileSystem(this.rootUri)
         this.inMemoryFileSystem = new InMemoryFileSystem(this.root, this.logger)
     }
 
@@ -409,6 +406,7 @@ export class TypeScriptService {
                     params.position.line,
                     params.position.character
                 )
+                // @ts-ignore TODO fixme
                 const definitions: ts.DefinitionInfo[] | undefined = goToType
                     ? configuration.getService().getTypeDefinitionAtPosition(fileName, offset)
                     : configuration.getService().getDefinitionAtPosition(fileName, offset)
