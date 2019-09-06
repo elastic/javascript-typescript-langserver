@@ -1,8 +1,8 @@
 {
-  "name": "javascript-typescript-langserver",
-  "homepage": "https://github.com/sourcegraph/javascript-typescript-langserver",
-  "author": "Sourcegraph",
-  "version": "0.0.0-development",
+  "name": "@elastic/javascript-typescript-langserver",
+  "homepage": "https://github.com/elastic/javascript-typescript-langserver",
+  "author": "Elastic",
+  "version": "0.3.0-development",
   "license": "Apache-2.0",
   "description": "Implementation of the Language Server Protocol for JavaScript and TypeScript",
   "keywords": [
@@ -14,11 +14,11 @@
     "typescript"
   ],
   "bugs": {
-    "url": "https://github.com/sourcegraph/javascript-typescript-langserver/issues"
+    "url": "https://github.com/elastic/javascript-typescript-langserver/issues"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/sourcegraph/javascript-typescript-langserver.git"
+    "url": "https://github.com/elastic/javascript-typescript-langserver.git"
   },
   "engines": {
     "node": ">=6.0.0"
@@ -56,7 +56,7 @@
     "rxjs": "^5.5.0",
     "semaphore-async-await": "^1.5.1",
     "string-similarity": "^2.0.0",
-    "typescript": "~3.0.3",
+    "typescript": "~3.3.3333",
     "vscode-jsonrpc": "^4.0.0",
     "vscode-languageserver": "^5.0.0",
     "vscode-languageserver-types": "^3.0.3"

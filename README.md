@@ -1,3 +1,19 @@
+# Notice
+
+This is a fork of: https://github.com/sourcegraph/javascript-typescript-langserver
+
+The goal of this fork is:
+1. Simplify file system model (only use local file system)
+2. Largely Reduce memory footprint
+3. Replace Observable with promise 
+4. Add APIs that specific for Elastic Code
+
+Non goal
+1. Make it a full featured langserver that do best for all LSP calls, specifically, it will optimize for readonly use cases
+
+Q: Why not https://github.com/theia-ide/typescript-language-server?
+A: the fact it calls tsserver bring a lot of overhead, making the indexing speed very slow. However, we are going to brow code from them 
+
 # JavaScript/TypeScript language server
 
 [![npm](https://img.shields.io/npm/v/javascript-typescript-langserver.svg)](https://www.npmjs.com/package/javascript-typescript-langserver)
