@@ -1,15 +1,15 @@
+import { Logger } from './logging';
+
 import { spawnSync } from 'child_process'
-import { existsSync } from 'fs';
+import * as fs from 'mz/fs';
 import { resolve } from 'path';
+// import * as rimraf from 'rimraf';
+// import { promisify } from 'util';
 
 export class DependencyManager {
-    private readonly rootPath: string;
+    // private rimrafAysnc = promisify(rimraf);
 
-    constructor(
-        rootPath: string,
-    ) {
-        this.rootPath = rootPath
-    }
+    constructor(readonly rootPath: string, readonly logger: Logger, readonly gitHostWhitelist: string[]) { }
 
     public installDependency(): void {
         try {
@@ -43,7 +43,7 @@ export class DependencyManager {
         // if (existsSync(resolve(cwd, 'package-lock.json'))) {
         //     cmd = 'npm'
         // }
-        if (!existsSync(resolve(cwd, 'package.json'))) {
+        if (!fs.existsSync(resolve(cwd, 'package.json'))) {
             return
         }
 
@@ -71,6 +71,9 @@ export class DependencyManager {
                 stdio: 'inherit',
             }
         )
+
+        // TODO filter deps
+        // this.deletePackageRecursively(this.rootPath);
 
         // this.npmProcess.stdout.on('data', data => {
         //     console.debug('stdout: ' + data)

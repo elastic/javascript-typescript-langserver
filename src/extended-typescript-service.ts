@@ -51,8 +51,6 @@ import { PatchedInMemoryFileSystem } from './memfs-patched';
 export class ExtendedTypescriptService extends TypeScriptService {
     private dependencyManager: DependencyManager | null // TODO should we assign null
 
-    private gitHostWhitelist: string[] | undefined
-
     constructor(protected client: LanguageClient, protected options: TypeScriptServiceOptions = {}) {
         super(client, options)
         // @ts-ignore
@@ -68,13 +66,13 @@ export class ExtendedTypescriptService extends TypeScriptService {
     public initialize(params: InitializeParams, span?: Span): Observable<Operation> {
         // TODO what about the promise here?
         this.dependencyManager = new DependencyManager(
-            params.rootPath || uri2path(params.rootUri!)
-        )
+            params.rootPath || uri2path(params.rootUri!),
+            this.logger,
+            params.initializationOptions.gitHostWhitelist);
 
         if (params.initializationOptions.installNodeDependency) {
             this.dependencyManager.installDependency()
         }
-        this.gitHostWhitelist = params.initializationOptions.gitHostWhitelist
 
         return super.initialize(params).flatMap(r => {
                 const trimmedRootPath = this.projectManager.getRemoteRoot().replace(/[\\\/]+$/, '')
@@ -117,50 +115,50 @@ export class ExtendedTypescriptService extends TypeScriptService {
     }
 
     // @ts-ignore
-    private getHoverForSymbol(info: ts.QuickInfo): MarkupContent | MarkedString | MarkedString[] {
-        if (!info) {
-            return []
-        }
-        // @ts-ignore
-        const contents: (MarkedString | string)[] = []
-        // Add declaration without the kind
-        const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
-        contents.push({ language: 'typescript', value: this.replaceWorkspaceInString(declaration) })
-
-        if (info.kind) {
-            let kind = '**' + info.kind + '**'
-            const modifiers = info.kindModifiers
-                .split(',')
-                // Filter out some quirks like "constructor (exported)"
-                .filter(
-                    mod =>
-                        mod &&
-                        (mod !== ts.ScriptElementKindModifier.exportedModifier ||
-                            info.kind !== ts.ScriptElementKind.constructorImplementationElement)
-                )
-                // Make proper adjectives
-                .map(mod => {
-                    switch (mod) {
-                        case ts.ScriptElementKindModifier.ambientModifier:
-                            return 'ambient'
-                        case ts.ScriptElementKindModifier.exportedModifier:
-                            return 'exported'
-                        default:
-                            return mod
-                    }
-                })
-            if (modifiers.length > 0) {
-                kind += ' _(' + modifiers.join(', ') + ')_'
-            }
-            contents.push(kind)
-        }
-        // Add documentation
-        const documentation = ts.displayPartsToString(info.documentation)
-        if (documentation) {
-            contents.push(documentation)
-        }
-        return contents
-    }
+    // private getHoverForSymbol(info: ts.QuickInfo): MarkupContent | MarkedString | MarkedString[] {
+    //     if (!info) {
+    //         return []
+    //     }
+    //     // @ts-ignore
+    //     const contents: (MarkedString | string)[] = []
+    //     // Add declaration without the kind
+    //     const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
+    //     contents.push({ language: 'typescript', value: this.replaceWorkspaceInString(declaration) })
+    //
+    //     if (info.kind) {
+    //         let kind = '**' + info.kind + '**'
+    //         const modifiers = info.kindModifiers
+    //             .split(',')
+    //             // Filter out some quirks like "constructor (exported)"
+    //             .filter(
+    //                 mod =>
+    //                     mod &&
+    //                     (mod !== ts.ScriptElementKindModifier.exportedModifier ||
+    //                         info.kind !== ts.ScriptElementKind.constructorImplementationElement)
+    //             )
+    //             // Make proper adjectives
+    //             .map(mod => {
+    //                 switch (mod) {
+    //                     case ts.ScriptElementKindModifier.ambientModifier:
+    //                         return 'ambient'
+    //                     case ts.ScriptElementKindModifier.exportedModifier:
+    //                         return 'exported'
+    //                     default:
+    //                         return mod
+    //                 }
+    //             })
+    //         if (modifiers.length > 0) {
+    //             kind += ' _(' + modifiers.join(', ') + ')_'
+    //         }
+    //         contents.push(kind)
+    //     }
+    //     // Add documentation
+    //     const documentation = ts.displayPartsToString(info.documentation)
+    //     if (documentation) {
+    //         contents.push(documentation)
+    //     }
+    //     return contents
+    // }
 
     private emptyOperation = Observable.of({ op: 'add', path: '', value: [{ symbols: [], references: [] }] } as Operation);
 
@@ -349,12 +347,11 @@ export class ExtendedTypescriptService extends TypeScriptService {
         return this.projectManager
             .ensureReferencedFiles(uri, undefined, undefined, span)
             .toArray()
-            .mergeMap(
-                (): Observable<Hover> => {
+            .map(
+                (): Hover => {
                     const fileName: string = uri2path(uri)
                     const configuration = this.projectManager.getConfiguration(fileName)
                     // configuration.ensureBasicFiles(span)
-
                     const sourceFile = this._getSourceFile(configuration, fileName, span) // TODO could we replace?
                     if (!sourceFile) {
                         throw new Error(`Unknown text document ${uri}`)
@@ -366,93 +363,57 @@ export class ExtendedTypescriptService extends TypeScriptService {
                     )
                     const info = configuration.getService().getQuickInfoAtPosition(fileName, offset)
                     if (!info) {
-                        return Observable.of({ contents: [] })
+                        return { contents: [] }
                     }
                     const contents: (MarkedString | string)[] = []
-
-                    // mode
-                    const definitions = configuration.getService().getDefinitionAtPosition(fileName, offset);
-
-                    const result = (defintionUri: string) => {
-                        const isDocAccessible = this.isUriAccessible(defintionUri);
-                        // Add declaration without the kind
-                        const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
-                        contents.push({ language: 'typescript', value: declaration })
-                        // Add kind with modifiers, e.g. "method (private, ststic)", "class (exported)"
-                        if (info.kind) {
-                            let kind = '**' + info.kind + '**'
-                            const modifiers = info.kindModifiers
-                                .split(',')
-                                // Filter out some quirks like "constructor (exported)"
-                                .filter(
-                                    mod =>
-                                        mod &&
-                                        (mod !== ts.ScriptElementKindModifier.exportedModifier ||
-                                            info.kind !== ts.ScriptElementKind.constructorImplementationElement)
-                                )
-                                // Make proper adjectives
-                                .map(mod => {
-                                    switch (mod) {
-                                        case ts.ScriptElementKindModifier.ambientModifier:
-                                            return 'ambient'
-                                        case ts.ScriptElementKindModifier.exportedModifier:
-                                            return 'exported'
-                                        default:
-                                            return mod
-                                    }
-                                })
-                            if (modifiers.length > 0) {
-                                kind += ' _(' + modifiers.join(', ') + ')_'
-                            }
-                            contents.push(kind)
+                    // Add declaration without the kind
+                    const declaration = ts.displayPartsToString(info.displayParts).replace(/^\(.+?\)\s+/, '')
+                    contents.push({ language: 'typescript', value: declaration })
+                    // Add kind with modifiers, e.g. "method (private, ststic)", "class (exported)"
+                    if (info.kind) {
+                        let kind = '**' + info.kind + '**'
+                        const modifiers = info.kindModifiers
+                            .split(',')
+                            // Filter out some quirks like "constructor (exported)"
+                            .filter(
+                                mod =>
+                                    mod &&
+                                    (mod !== ts.ScriptElementKindModifier.exportedModifier ||
+                                        info.kind !== ts.ScriptElementKind.constructorImplementationElement)
+                            )
+                            // Make proper adjectives
+                            .map(mod => {
+                                switch (mod) {
+                                    case ts.ScriptElementKindModifier.ambientModifier:
+                                        return 'ambient'
+                                    case ts.ScriptElementKindModifier.exportedModifier:
+                                        return 'exported'
+                                    default:
+                                        return mod
+                                }
+                            })
+                        if (modifiers.length > 0) {
+                            kind += ' _(' + modifiers.join(', ') + ')_'
                         }
-                        // Add documentation
-                        const documentation = ts.displayPartsToString(info.documentation)
-                        if (isDocAccessible && documentation) {
-                            contents.push(documentation)
-                        }
-                        if (!isDocAccessible && documentation) {
-                            contents.push('*Documentation not show because target is not in \'xpack.code.security.gitHostWhitelist\'*')
-                        }
-                        const start = ts.getLineAndCharacterOfPosition(sourceFile, info.textSpan.start)
-                        const end = ts.getLineAndCharacterOfPosition(sourceFile, info.textSpan.start + info.textSpan.length)
-
-                        return {
-                            contents: this.replaceWorkspaceInDoc(contents), // modified
-                            range: {
-                                start,
-                                end,
-                            },
-                        }
+                        contents.push(kind)
                     }
-
-                    if (definitions) {
-                        for (const defintion of definitions) {
-                            return this.convertUri(path2uri(defintion.fileName)).map(uri => result(uri))
-                        }
+                    // Add documentation
+                    const documentation = ts.displayPartsToString(info.documentation)
+                    if (documentation) {
+                        contents.push(documentation)
                     }
-                    return Observable.of(result(uri))
+                    const start = ts.getLineAndCharacterOfPosition(sourceFile, info.textSpan.start)
+                    const end = ts.getLineAndCharacterOfPosition(sourceFile, info.textSpan.start + info.textSpan.length)
+
+                    return {
+                        contents: this.replaceWorkspaceInDoc(contents), // modified
+                        range: {
+                            start,
+                            end,
+                        },
+                    }
                 }
             )
-    }
-
-    private isUriAccessible(uri: string): boolean {
-        if (uri.startsWith(this.rootUri)) {
-            return true
-        }
-        if (!this.gitHostWhitelist || this.gitHostWhitelist.length === 0) {
-            return true
-        }
-        let accessble = false;
-        const uriWithoutProtocol = uri.split('://')[1]
-
-        for (const host of this.gitHostWhitelist) {
-            if (uriWithoutProtocol.startsWith(host)) {
-                accessble = true;
-                break;
-            }
-        }
-        return accessble;
     }
 
     // Fix go to definition
