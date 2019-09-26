@@ -3,7 +3,6 @@ import * as fs from 'mz/fs'
 import { Span } from 'opentracing'
 import { Observable } from 'rxjs'
 import Semaphore from 'semaphore-async-await'
-import { LanguageClient } from './lang-handler'
 import { InMemoryFileSystem } from './memfs'
 import { traceObservable } from './tracing'
 import { normalizeUri, uri2path } from './util'
@@ -24,32 +23,6 @@ export interface FileSystem {
      * @return An Observable that emits the text document content
      */
     getTextDocumentContent(uri: string, childOf?: Span): Observable<string>
-}
-
-export class RemoteFileSystem implements FileSystem {
-    constructor(private client: LanguageClient) {}
-
-    /**
-     * The files request is sent from the server to the client to request a list of all files in the workspace or inside the directory of the base parameter, if given.
-     * A language server can use the result to index files by filtering and doing a content request for each text document of interest.
-     */
-    public getWorkspaceFiles(base?: string, childOf = new Span()): Observable<string> {
-        return this.client
-            .workspaceXfiles({ base }, childOf)
-            .mergeMap(textDocuments => textDocuments)
-            .map(textDocument => normalizeUri(textDocument.uri))
-    }
-
-    /**
-     * The content request is sent from the server to the client to request the current content of
-     * any text document. This allows language servers to operate without accessing the file system
-     * directly.
-     */
-    public getTextDocumentContent(uri: string, childOf = new Span()): Observable<string> {
-        return this.client
-            .textDocumentXcontent({ textDocument: { uri } }, childOf)
-            .map(textDocument => textDocument.text)
-    }
 }
 
 export class LocalFileSystem implements FileSystem {

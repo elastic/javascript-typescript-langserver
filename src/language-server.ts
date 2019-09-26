@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 import { Tracer } from 'opentracing'
+import { ExtendedTypescriptService } from './extended-typescript-service';
 import { FileLogger, StdioLogger } from './logging'
 import { serve, ServeOptions } from './server'
-import { TypeScriptService, TypeScriptServiceOptions } from './typescript-service'
+import { TypeScriptServiceOptions } from './typescript-service'
 const program = require('commander')
 const packageJson = require('../package.json')
 const { initTracer } = require('jaeger-client')
@@ -13,7 +14,6 @@ const numCPUs = require('os').cpus().length
 
 program
     .version(packageJson.version)
-    .option('-s, --strict', 'enabled strict mode')
     .option('-p, --port [port]', 'specifies LSP port to use (' + defaultLspPort + ')', parseInt)
     .option(
         '-c, --cluster [num]',
@@ -28,7 +28,6 @@ program
 const options: ServeOptions & TypeScriptServiceOptions = {
     clusterSize: program.cluster || numCPUs,
     lspPort: program.port || defaultLspPort,
-    strict: program.strict,
     logMessages: program.trace,
     logger: program.logfile ? new FileLogger(program.logfile) : new StdioLogger(),
     tracer: program.enableJaeger
@@ -36,4 +35,4 @@ const options: ServeOptions & TypeScriptServiceOptions = {
         : new Tracer(),
 }
 
-serve(options, client => new TypeScriptService(client, options))
+serve(options, client => new ExtendedTypescriptService(client, options))
