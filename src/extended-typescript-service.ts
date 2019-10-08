@@ -67,34 +67,33 @@ export class ExtendedTypescriptService extends TypeScriptService {
         // TODO what about the promise here?
         this.dependencyManager = new DependencyManager(
             params.rootPath || uri2path(params.rootUri!),
+            params.initializationOptions.cachePath,
             this.logger,
             params.initializationOptions.gitHostWhitelist);
 
-        if (params.initializationOptions.installNodeDependency) {
-            this.dependencyManager.installDependency()
-        }
+        return Observable.fromPromise(this.dependencyManager.installDependency(params.initializationOptions.installNodeDependency)).flatMap( _ =>
+            super.initialize(params).flatMap(r => {
+                    const trimmedRootPath = this.projectManager.getRemoteRoot().replace(/[\\\/]+$/, '')
+                    const fallbackConfigJs = this.projectManager.getConfiguration(trimmedRootPath, 'js')
+                    const fallbackConfigTs = this.projectManager.getConfiguration(trimmedRootPath, 'ts')
 
-        return super.initialize(params).flatMap(r => {
-                const trimmedRootPath = this.projectManager.getRemoteRoot().replace(/[\\\/]+$/, '')
-                const fallbackConfigJs = this.projectManager.getConfiguration(trimmedRootPath, 'js')
-                const fallbackConfigTs = this.projectManager.getConfiguration(trimmedRootPath, 'ts')
-
-                // Must run after super.initialize
-                this.projectManager.ensureConfigDependencies()
-                return this.projectManager.ensureModuleStructure().defaultIfEmpty(undefined).map(() => {
-                    // We want to make sure root config at least exist, todo, submit a patch
-                    if (!this.projectManager.getConfigurationIfExists(trimmedRootPath, 'js')) {
-                        // @ts-ignore
-                        this.projectManager.configs.js.set(trimmedRootPath, fallbackConfigJs)
-                    }
-                    if (!this.projectManager.getConfigurationIfExists(trimmedRootPath, 'ts')) {
-                        // @ts-ignore
-                        this.projectManager.configs.ts.set(trimmedRootPath, fallbackConfigTs)
-                    }
-                    return r;
-                })
-            }
-        )
+                    // Must run after super.initialize
+                    this.projectManager.ensureConfigDependencies()
+                    return this.projectManager.ensureModuleStructure().defaultIfEmpty(undefined).map(() => {
+                        // We want to make sure root config at least exist, todo, submit a patch
+                        if (!this.projectManager.getConfigurationIfExists(trimmedRootPath, 'js')) {
+                            // @ts-ignore
+                            this.projectManager.configs.js.set(trimmedRootPath, fallbackConfigJs)
+                        }
+                        if (!this.projectManager.getConfigurationIfExists(trimmedRootPath, 'ts')) {
+                            // @ts-ignore
+                            this.projectManager.configs.ts.set(trimmedRootPath, fallbackConfigTs)
+                        }
+                        return r;
+                    })
+                }
+            )
+        );
     }
 
     public shutdown(params?: {}, span?: Span): Observable<Operation> {
